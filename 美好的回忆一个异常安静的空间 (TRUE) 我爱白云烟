@@ -1,57 +1,343 @@
-getgenv().Settings = {
-    Remove_Grass,
-    Remove_Trees,
-    Remove_Walls,
-}
+--// Load Orion
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/Articles-Hub/ROBLOXScript/refs/heads/main/Library/Orion/Source.lua')))()
 
-workspace.Thrown.ChildAdded:Connect(function(v)
-    if v:IsA("BasePart") then
-        task.wait()
-        v:Destroy()
-    end
-end)
-
-workspace.Terrain.ChildAdded:Connect(function(v)
-    if v:IsA("Attachment") then
-        task.wait()
-        v:Destroy()
-    end
-end)
-
-if Settings.Remove_Grass then
-    workspace.Map.Grass:Destroy()
-    workspace.Map.GrassBottom:Destroy()
-    workspace.Map.GrassTop:Destroy()
-end
-
-if Settings.Remove_Trees then
-    workspace.Map.Trees:Destroy()
-end
-
-if Settings.Remove_Walls then
-    workspace.Map.Walls:Destroy()
-end
-
-for i, v in game:GetDescendants() do
-    if v:IsA("BasePart") or v:IsA("Union") or v:IsA("CornerWedgePart") or v:IsA("TrussPart") then
-        v.Material = "Plastic"
-        v.Reflectance = 0
-        v.BackSurface = "SmoothNoOutlines"
-        v.BottomSurface = "SmoothNoOutlines"
-        v.FrontSurface = "SmoothNoOutlines"
-        v.LeftSurface = "SmoothNoOutlines"
-        v.RightSurface = "SmoothNoOutlines"
-        v.TopSurface = "SmoothNoOutlines"
-    elseif v:IsA("Decal") or v:IsA("Texture") then
-        v.Transparency = 1
-    end
-end
-
-game.StarterGui:SetCore("SendNotification", {
-    Title = "抗延迟";
-    Text = "美好的回忆一个异常安静的空间 (TRUE) 我爱白云烟";
-    Icon = "";
-    Duration = 5;
+local Window = OrionLib:MakeWindow({
+    Name = "我爱你白云烟",
+    HidePremium = false,
+    SaveConfig = false
 })
 
-warn("美好的回忆一个异常安静的空间 (TRUE) was here")
+--// Tabs
+local Home = Window:MakeTab({
+    Name = "Home",
+    Icon = "rbxassetid://4483345998"
+})
+
+local Misc = Window:MakeTab({
+    Name = "Misc",
+    Icon = "rbxassetid://4483345998"
+})
+
+Home:AddImage({
+    Icon = "rbxassetid://82331828824460",
+    Visible = true,
+    Size = 50
+})
+
+--// Services
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+
+local lp = Players.LocalPlayer
+
+--// States
+local autoEquip = false
+local autoClick = false
+local godMode = false
+local antiAFK = false
+local avatarName = ""
+
+--// =====================
+--// BLACK SCREEN
+--// =====================
+local blackGui = Instance.new("ScreenGui")
+blackGui.Name = "BLACK_SCREEN"
+blackGui.IgnoreGuiInset = true
+blackGui.DisplayOrder = 999999
+
+local blackFrame = Instance.new("Frame", blackGui)
+blackFrame.Size = UDim2.new(1,0,1,0)
+blackFrame.BackgroundColor3 = Color3.new(0,0,0)
+blackFrame.BorderSizePixel = 0
+
+--// =====================
+--// AUTO EQUIP
+--// =====================
+local function equipAllTools()
+    local char = lp.Character
+    if not char then return end
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    for _, tool in pairs(lp.Backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            pcall(function()
+                hum:EquipTool(tool)
+            end)
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if autoEquip then equipAllTools() end
+    end
+end)
+
+lp.Backpack.ChildAdded:Connect(function()
+    if autoEquip then
+        task.wait(0.1)
+        equipAllTools()
+    end
+end)
+
+lp.CharacterAdded:Connect(function(char)
+    repeat task.wait() until char:FindFirstChildOfClass("Humanoid")
+    task.wait(0.2)
+
+    if autoEquip then equipAllTools() end
+
+    -- auto avatar
+    if avatarName ~= "" then
+        task.wait(0.5)
+        pcall(function()
+            local id = Players:GetUserIdFromNameAsync(avatarName)
+            local desc = Players:GetHumanoidDescriptionFromUserId(id)
+            char:FindFirstChildOfClass("Humanoid"):ApplyDescription(desc)
+        end)
+    end
+end)
+
+--// =====================
+--// AUTO CLICK
+--// =====================
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+        if autoClick then
+            if UserInputService:GetFocusedTextBox() then continue end
+
+            pcall(function()
+                VirtualUser:CaptureController()
+                VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                task.wait()
+                VirtualUser:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            end)
+        end
+    end
+end)
+
+--// =====================
+--// GOD MODE
+--// =====================
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+
+        local char = lp.Character
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum and godMode then
+                hum.Health = hum.MaxHealth
+            end
+        end
+    end
+end)
+
+--// =====================
+--// ANTI AFK
+--// =====================
+lp.Idled:Connect(function()
+    if antiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
+--// =====================
+--// AVATAR CHANGER
+--// =====================
+local function applyAvatarByName(name)
+    local success, userId = pcall(function()
+        return Players:GetUserIdFromNameAsync(name)
+    end)
+    if not success then return end
+
+    local success2, desc = pcall(function()
+        return Players:GetHumanoidDescriptionFromUserId(userId)
+    end)
+    if not success2 then return end
+
+    local char = lp.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:ApplyDescription(desc)
+        end
+    end
+end
+
+--// =====================
+--// HIM TEXT EFFECT
+--// =====================
+local playing = false
+
+local textGui = Instance.new("ScreenGui", game.CoreGui)
+textGui.ResetOnSpawn = false
+
+local main = Instance.new("TextLabel", textGui)
+main.Size = UDim2.new(0,500,0,40)
+main.Position = UDim2.new(0.5,-250,0.75,0)
+main.BackgroundTransparency = 1
+main.TextScaled = true
+main.Font = Enum.Font.GothamBold
+
+local sub = Instance.new("TextLabel", textGui)
+sub.Size = UDim2.new(0,500,0,25)
+sub.Position = UDim2.new(0.5,-250,0.75,35)
+sub.BackgroundTransparency = 1
+sub.TextScaled = true
+sub.Font = Enum.Font.Gotham
+sub.TextColor3 = Color3.fromRGB(200,200,200)
+
+local function showText(t, st, laugh)
+    main.Text = t
+    sub.Text = st
+    main.TextColor3 = laugh and Color3.fromRGB(255,0,0) or Color3.new(1,1,1)
+
+    if laugh then
+        task.spawn(function()
+            for i=1,20 do
+                main.Position = UDim2.new(0.5,-250 + math.random(-3,3),0.75 + math.random(-3,3),0)
+                task.wait(0.03)
+            end
+            main.Position = UDim2.new(0.5,-250,0.75,0)
+        end)
+
+        local s = Instance.new("Sound", workspace)
+        s.SoundId = "rbxassetid://140445930084397"
+        s.Volume = 2
+        s:Play()
+        game:GetService("Debris"):AddItem(s,5)
+    end
+end
+
+--// =====================
+--// HOME UI
+--// =====================
+Home:AddToggle({
+    Name = "Auto Equip",
+    Default = false,
+    Callback = function(v)
+        autoEquip = v
+        if v then equipAllTools() end
+    end
+})
+
+Home:AddToggle({
+    Name = "Auto Click",
+    Default = false,
+    Callback = function(v)
+        autoClick = v
+    end
+})
+
+Home:AddToggle({
+    Name = "God Mode 🗿",
+    Default = false,
+    Callback = function(v)
+        godMode = v
+    end
+})
+
+Home:AddToggle({
+    Name = "Anti AFK 💤",
+    Default = false,
+    Callback = function(v)
+        antiAFK = v
+    end
+})
+
+Home:AddToggle({
+    Name = "Black Screen (AFK)",
+    Default = false,
+    Callback = function(v)
+        blackGui.Parent = v and game.CoreGui or nil
+    end
+})
+
+--// =====================
+--// MISC UI
+-- =====================
+Misc:AddTextbox({
+    Name = "Avatar Player Name",
+    Default = "",
+    TextDisappear = false,
+    Callback = function(v)
+        avatarName = v
+    end
+})
+
+Misc:AddButton({
+    Name = "Apply Avatar (Client)",
+    Callback = function()
+        if avatarName ~= "" then
+            applyAvatarByName(avatarName)
+        end
+    end
+})
+
+--🔥 HIM BUTTON
+Misc:AddButton({
+    Name = "Him",
+    Callback = function()
+        if playing then return end
+        playing = true
+
+        showText(
+            "Why do you know I'm here, stranger?",
+            "你为什么知道我在这里，陌生人？",
+            false
+        )
+        task.wait(3)
+
+        showText(
+            "It would be more interesting if you keep interfering with the system.",
+            "如果你继续干扰系统，那会更有趣。",
+            false
+        )
+        task.wait(3)
+
+        showText(
+            "Hahah...?",
+            "哈哈哈...？",
+            true
+        )
+
+        task.wait(3)
+        main.Text = ""
+        sub.Text = ""
+
+        playing = false
+    end
+})
+
+Misc:AddButton({
+    Name = "Rejoin Server",
+    Callback = function()
+        TeleportService:Teleport(game.PlaceId, lp)
+    end
+})
+
+Misc:AddButton({
+    Name = "Reset Character",
+    Callback = function()
+        lp:LoadCharacter()
+    end
+})
+
+Misc:AddButton({
+    Name = "Destroy UI",
+    Callback = function()
+        OrionLib:Destroy()
+    end
+})
+
+Misc:AddParagraph("Info", "Full script + Him effect 😎")
+
+--// Init
+OrionLib:Init()
