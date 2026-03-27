@@ -18,17 +18,11 @@ local Misc = Window:MakeTab({
     Icon = "rbxassetid://4483345998"
 })
 
-Home:AddImage({
-    Icon = "rbxassetid://82331828824460",
-    Visible = true,
-    Size = 50
-})
-
 --// Services
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
 local UserInputService = game:GetService("UserInputService")
-local TeleportService = game:GetService("TeleportService")
+local TweenService = game:GetService("TweenService")
 
 local lp = Players.LocalPlayer
 
@@ -39,34 +33,25 @@ local godMode = false
 local antiAFK = false
 local avatarName = ""
 
---// =====================
 --// BLACK SCREEN
---// =====================
 local blackGui = Instance.new("ScreenGui")
-blackGui.Name = "BLACK_SCREEN"
 blackGui.IgnoreGuiInset = true
 blackGui.DisplayOrder = 999999
 
 local blackFrame = Instance.new("Frame", blackGui)
 blackFrame.Size = UDim2.new(1,0,1,0)
 blackFrame.BackgroundColor3 = Color3.new(0,0,0)
-blackFrame.BorderSizePixel = 0
 
---// =====================
 --// AUTO EQUIP
---// =====================
 local function equipAllTools()
     local char = lp.Character
     if not char then return end
-
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
 
     for _, tool in pairs(lp.Backpack:GetChildren()) do
         if tool:IsA("Tool") then
-            pcall(function()
-                hum:EquipTool(tool)
-            end)
+            hum:EquipTool(tool)
         end
     end
 end
@@ -78,69 +63,38 @@ task.spawn(function()
     end
 end)
 
-lp.Backpack.ChildAdded:Connect(function()
-    if autoEquip then
-        task.wait(0.1)
-        equipAllTools()
-    end
-end)
-
 lp.CharacterAdded:Connect(function(char)
-    repeat task.wait() until char:FindFirstChildOfClass("Humanoid")
     task.wait(0.2)
-
     if autoEquip then equipAllTools() end
-
-    -- auto avatar
-    if avatarName ~= "" then
-        task.wait(0.5)
-        pcall(function()
-            local id = Players:GetUserIdFromNameAsync(avatarName)
-            local desc = Players:GetHumanoidDescriptionFromUserId(id)
-            char:FindFirstChildOfClass("Humanoid"):ApplyDescription(desc)
-        end)
-    end
 end)
 
---// =====================
 --// AUTO CLICK
---// =====================
 task.spawn(function()
     while true do
         task.wait(0.05)
-        if autoClick then
-            if UserInputService:GetFocusedTextBox() then continue end
-
+        if autoClick and not UserInputService:GetFocusedTextBox() then
             pcall(function()
                 VirtualUser:CaptureController()
-                VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                VirtualUser:Button1Down(Vector2.new(), workspace.CurrentCamera.CFrame)
                 task.wait()
-                VirtualUser:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                VirtualUser:Button1Up(Vector2.new(), workspace.CurrentCamera.CFrame)
             end)
         end
     end
 end)
 
---// =====================
 --// GOD MODE
---// =====================
 task.spawn(function()
     while true do
         task.wait(0.1)
-
-        local char = lp.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum and godMode then
-                hum.Health = hum.MaxHealth
-            end
+        if godMode then
+            local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.Health = hum.MaxHealth end
         end
     end
 end)
 
---// =====================
 --// ANTI AFK
---// =====================
 lp.Idled:Connect(function()
     if antiAFK then
         VirtualUser:CaptureController()
@@ -148,196 +102,144 @@ lp.Idled:Connect(function()
     end
 end)
 
---// =====================
---// AVATAR CHANGER
---// =====================
-local function applyAvatarByName(name)
-    local success, userId = pcall(function()
+--// AVATAR
+local function applyAvatar(name)
+    local ok,id = pcall(function()
         return Players:GetUserIdFromNameAsync(name)
     end)
-    if not success then return end
+    if not ok then return end
 
-    local success2, desc = pcall(function()
-        return Players:GetHumanoidDescriptionFromUserId(userId)
+    local ok2,desc = pcall(function()
+        return Players:GetHumanoidDescriptionFromUserId(id)
     end)
-    if not success2 then return end
+    if not ok2 then return end
 
-    local char = lp.Character
-    if char then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:ApplyDescription(desc)
-        end
-    end
+    local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+    if hum then hum:ApplyDescription(desc) end
 end
 
 --// =====================
---// HIM TEXT EFFECT
+--// HIM EFFECT (FADE)
 --// =====================
 local playing = false
 
-local textGui = Instance.new("ScreenGui", game.CoreGui)
-textGui.ResetOnSpawn = false
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.ResetOnSpawn = false
 
-local main = Instance.new("TextLabel", textGui)
+local main = Instance.new("TextLabel", gui)
 main.Size = UDim2.new(0,500,0,40)
 main.Position = UDim2.new(0.5,-250,0.75,0)
 main.BackgroundTransparency = 1
 main.TextScaled = true
 main.Font = Enum.Font.GothamBold
+main.TextTransparency = 1
 
-local sub = Instance.new("TextLabel", textGui)
+local sub = Instance.new("TextLabel", gui)
 sub.Size = UDim2.new(0,500,0,25)
 sub.Position = UDim2.new(0.5,-250,0.75,35)
 sub.BackgroundTransparency = 1
 sub.TextScaled = true
 sub.Font = Enum.Font.Gotham
 sub.TextColor3 = Color3.fromRGB(200,200,200)
+sub.TextTransparency = 1
 
-local function showText(t, st, laugh)
-    main.Text = t
-    sub.Text = st
-    main.TextColor3 = laugh and Color3.fromRGB(255,0,0) or Color3.new(1,1,1)
+local function fadeText(text1,text2,isLaugh)
+    main.Text = text1
+    sub.Text = text2
+    main.TextColor3 = isLaugh and Color3.fromRGB(255,0,0) or Color3.new(1,1,1)
 
-    if laugh then
+    -- fade in
+    TweenService:Create(main,TweenInfo.new(0.5),{TextTransparency=0}):Play()
+    TweenService:Create(sub,TweenInfo.new(0.5),{TextTransparency=0}):Play()
+
+    if isLaugh then
+        -- rung + sound cùng lúc
+        task.spawn(function()
+            local s = Instance.new("Sound", workspace)
+            s.SoundId = "rbxassetid://140445930084397"
+            s.Volume = 2
+            s:Play()
+            game:GetService("Debris"):AddItem(s,5)
+        end)
+
         task.spawn(function()
             for i=1,20 do
-                main.Position = UDim2.new(0.5,-250 + math.random(-3,3),0.75 + math.random(-3,3),0)
+                main.Position = UDim2.new(0.5,-250 + math.random(-4,4),0.75 + math.random(-3,3),0)
                 task.wait(0.03)
             end
             main.Position = UDim2.new(0.5,-250,0.75,0)
         end)
-
-        local s = Instance.new("Sound", workspace)
-        s.SoundId = "rbxassetid://140445930084397"
-        s.Volume = 2
-        s:Play()
-        game:GetService("Debris"):AddItem(s,5)
     end
+
+    task.wait(2.5)
+
+    -- fade out
+    TweenService:Create(main,TweenInfo.new(0.5),{TextTransparency=1}):Play()
+    TweenService:Create(sub,TweenInfo.new(0.5),{TextTransparency=1}):Play()
+
+    task.wait(0.6)
 end
 
---// =====================
---// HOME UI
---// =====================
+--// UI HOME
 Home:AddToggle({
     Name = "Auto Equip",
-    Default = false,
-    Callback = function(v)
-        autoEquip = v
-        if v then equipAllTools() end
-    end
+    Callback = function(v) autoEquip = v end
 })
 
 Home:AddToggle({
     Name = "Auto Click",
-    Default = false,
-    Callback = function(v)
-        autoClick = v
-    end
+    Callback = function(v) autoClick = v end
 })
 
 Home:AddToggle({
     Name = "God Mode 🗿",
-    Default = false,
-    Callback = function(v)
-        godMode = v
-    end
+    Callback = function(v) godMode = v end
 })
 
 Home:AddToggle({
     Name = "Anti AFK 💤",
-    Default = false,
-    Callback = function(v)
-        antiAFK = v
-    end
+    Callback = function(v) antiAFK = v end
 })
 
 Home:AddToggle({
-    Name = "Black Screen (AFK)",
-    Default = false,
+    Name = "Black Screen",
     Callback = function(v)
         blackGui.Parent = v and game.CoreGui or nil
     end
 })
 
---// =====================
---// MISC UI
--- =====================
+--// MISC
 Misc:AddTextbox({
-    Name = "Avatar Player Name",
-    Default = "",
-    TextDisappear = false,
-    Callback = function(v)
-        avatarName = v
-    end
+    Name = "Avatar Name",
+    Callback = function(v) avatarName = v end
 })
 
 Misc:AddButton({
-    Name = "Apply Avatar (Client)",
+    Name = "Apply Avatar",
     Callback = function()
-        if avatarName ~= "" then
-            applyAvatarByName(avatarName)
-        end
+        if avatarName ~= "" then applyAvatar(avatarName) end
     end
 })
 
---🔥 HIM BUTTON
 Misc:AddButton({
     Name = "Him",
     Callback = function()
         if playing then return end
         playing = true
 
-        showText(
-            "Why do you know I'm here, stranger?",
-            "你为什么知道我在这里，陌生人？",
-            false
-        )
-        task.wait(3)
-
-        showText(
-            "It would be more interesting if you keep interfering with the system.",
-            "如果你继续干扰系统，那会更有趣。",
-            false
-        )
-        task.wait(3)
-
-        showText(
-            "Hahah...?",
-            "哈哈哈...？",
-            true
-        )
-
-        task.wait(3)
-        main.Text = ""
-        sub.Text = ""
+        fadeText("Why do you know I'm here, stranger?","你为什么知道我在这里，陌生人？",false)
+        fadeText("It would be more interesting if you keep interfering.","继续干扰会更有趣。",false)
+        fadeText("Hahah...?","哈哈哈...？",true)
 
         playing = false
     end
 })
 
 Misc:AddButton({
-    Name = "Rejoin Server",
+    Name = "Rejoin",
     Callback = function()
-        TeleportService:Teleport(game.PlaceId, lp)
+        game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
     end
 })
 
-Misc:AddButton({
-    Name = "Reset Character",
-    Callback = function()
-        lp:LoadCharacter()
-    end
-})
-
-Misc:AddButton({
-    Name = "Destroy UI",
-    Callback = function()
-        OrionLib:Destroy()
-    end
-})
-
-Misc:AddParagraph("Info", "Full script + Him effect 😎")
-
---// Init
 OrionLib:Init()
