@@ -1,245 +1,194 @@
---// Load Orion
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/Articles-Hub/ROBLOXScript/refs/heads/main/Library/Orion/Source.lua')))()
+if not game:IsLoaded() then game.Loaded:Wait() end 
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))() 
 
-local Window = OrionLib:MakeWindow({
-    Name = "我爱你白云烟",
-    HidePremium = false,
-    SaveConfig = false
+-- Create Window 
+local Window = Rayfield:CreateWindow({
+ Name = "实验",
+ Icon = 86418345950386,
+ LoadingTitle = "Loading...",
+ LoadingSubtitle = "by 我真的爱你    白云烟 ᥫᩣ",
+ ShowText = "白云烟 ᥫᩣ",
+ Theme = "Ocean",
+ ToggleUIKeybind = Enum.KeyCode.RightControl,
+ DisableRayfieldPrompts = true,
+ DisableBuildWarnings = true,
+ ConfigurationSaving = {
+  Enabled = false,
+  FolderName = nil,
+  FileName = "Skidder Yessir"
+ },
+ KeySystem = false
 })
 
---// Tabs
-local Home = Window:MakeTab({
-    Name = "Home",
-    Icon = "rbxassetid://4483345998"
+-- Main 
+getgenv().Auto_Click = true;
+
+-- Function
+function Auto_Click()
+ while task.wait(0.00001) do
+  if getgenv().Auto_Click == true then
+   for _, model in pairs(workspace.Sanses:GetChildren()) do
+    local clickHitbox = model:FindFirstChild("ClickHitbox")
+    if clickHitbox then
+     local clickDetector = clickHitbox:FindFirstChildWhichIsA("ClickDetector")
+     if clickDetector then
+      fireclickdetector(clickDetector)
+     end
+    end
+    task.wait(0.00001)
+   end
+  end
+ end
+end
+
+-- Tab Main
+local Tab = Window:CreateTab("☠️ Main") 
+Tab:CreateSection("Auto Farm (No Damage Boost)")
+
+Tab:CreateToggle({
+ Name = "Auto Click All Sans",
+ CurrentValue = false,
+ Flag = "Click",
+ Callback = function(Value)
+  getgenv().Auto_Click = Value
+  Auto_Click()
+ end,
 })
 
-local Misc = Window:MakeTab({
-    Name = "Misc",
-    Icon = "rbxassetid://4483345998"
+Tab:CreateSection("Other")
+
+Tab:CreateButton({
+ Name = "Remove Texture",
+ Callback = function()
+  for i,v in next,(workspace:GetDescendants()) do
+   if v:IsA("Part") then
+    v.Material = Enum.Material.SmoothPlastic
+   end
+  end
+ end,
 })
 
---// Services
-local Players = game:GetService("Players")
+Tab:CreateButton({
+ Name = "Delete All Effects",
+ Callback = function()
+  local a = game.Workspace:FindFirstChild("Attack")
+  if a then
+   a:Destroy()
+  end
+ end,
+})
+
+----------------------------------------------------
+-- Misc Tab
+local MiscTab = Window:CreateTab("🛠️ Misc")
+
+MiscTab:CreateSection("Player Settings")
+
+MiscTab:CreateSlider({
+ Name = "WalkSpeed",
+ Range = {1, 200},
+ Increment = 1,
+ Suffix = "Speed",
+ CurrentValue = 16,
+ Callback = function(Value)
+  local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+  if hum then
+   hum.WalkSpeed = Value
+  end
+ end,
+})
+
+MiscTab:CreateSlider({
+ Name = "JumpPower",
+ Range = {1, 200},
+ Increment = 1,
+ Suffix = "Jump",
+ CurrentValue = 50,
+ Callback = function(Value)
+  local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+  if hum then
+   hum.JumpPower = Value
+  end
+ end,
+})
+
+----------------------------------------------------
+-- Anti-AFK UI
+local player = game.Players.LocalPlayer
 local VirtualUser = game:GetService("VirtualUser")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
-local lp = Players.LocalPlayer
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game.CoreGui
 
---// States
-local autoEquip = false
-local autoClick = false
-local godMode = false
-local antiAFK = false
-local avatarName = ""
+local Frame = Instance.new("Frame")
+Frame.Parent = ScreenGui
+Frame.Size = UDim2.new(0, 200, 0, 120)
+Frame.Position = UDim2.new(0.05, 0, 0.3, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+Frame.BorderSizePixel = 2
+Frame.BorderColor3 = Color3.fromRGB(255,255,255)
 
---// BLACK SCREEN
-local blackGui = Instance.new("ScreenGui")
-blackGui.IgnoreGuiInset = true
-blackGui.DisplayOrder = 999999
+local UICorner = Instance.new("UICorner", Frame)
+UICorner.CornerRadius = UDim.new(0, 15)
 
-local blackFrame = Instance.new("Frame", blackGui)
-blackFrame.Size = UDim2.new(1,0,1,0)
-blackFrame.BackgroundColor3 = Color3.new(0,0,0)
+-- Image
+local Image = Instance.new("ImageLabel")
+Image.Parent = Frame
+Image.Size = UDim2.new(1,0,1,0)
+Image.BackgroundTransparency = 1
+Image.Image = "rbxassetid://82331828824460"
 
---// AUTO EQUIP
-local function equipAllTools()
-    local char = lp.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
+-- Toggle Button
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Parent = Frame
+ToggleBtn.Size = UDim2.new(0.8,0,0.3,0)
+ToggleBtn.Position = UDim2.new(0.1,0,0.4,0)
+ToggleBtn.Text = "Anti-AFK: OFF"
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0,0,0)
+ToggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
 
-    for _, tool in pairs(lp.Backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            hum:EquipTool(tool)
-        end
-    end
-end
+local UICorner2 = Instance.new("UICorner", ToggleBtn)
+UICorner2.CornerRadius = UDim.new(0,10)
 
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if autoEquip then equipAllTools() end
-    end
+-- Close Button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Parent = Frame
+CloseBtn.Size = UDim2.new(0,25,0,25)
+CloseBtn.Position = UDim2.new(1,-30,0,5)
+CloseBtn.Text = "X"
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255,0,0)
+CloseBtn.TextColor3 = Color3.fromRGB(255,255,255)
+
+local UICorner3 = Instance.new("UICorner", CloseBtn)
+UICorner3.CornerRadius = UDim.new(1,0)
+
+----------------------------------------------------
+
+local anti = false
+local connection
+
+ToggleBtn.MouseButton1Click:Connect(function()
+ anti = not anti
+ 
+ if anti then
+  ToggleBtn.Text = "Anti-AFK: ON"
+  
+  connection = player.Idled:Connect(function()
+   VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+   task.wait(1)
+   VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+  end)
+ else
+  ToggleBtn.Text = "Anti-AFK: OFF"
+  
+  if connection then
+   connection:Disconnect()
+   connection = nil
+  end
+ end
 end)
 
-lp.CharacterAdded:Connect(function(char)
-    task.wait(0.2)
-    if autoEquip then equipAllTools() end
+-- Close UI
+CloseBtn.MouseButton1Click:Connect(function()
+ ScreenGui:Destroy()
 end)
-
---// AUTO CLICK
-task.spawn(function()
-    while true do
-        task.wait(0.05)
-        if autoClick and not UserInputService:GetFocusedTextBox() then
-            pcall(function()
-                VirtualUser:CaptureController()
-                VirtualUser:Button1Down(Vector2.new(), workspace.CurrentCamera.CFrame)
-                task.wait()
-                VirtualUser:Button1Up(Vector2.new(), workspace.CurrentCamera.CFrame)
-            end)
-        end
-    end
-end)
-
---// GOD MODE
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if godMode then
-            local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-            if hum then hum.Health = hum.MaxHealth end
-        end
-    end
-end)
-
---// ANTI AFK
-lp.Idled:Connect(function()
-    if antiAFK then
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
-    end
-end)
-
---// AVATAR
-local function applyAvatar(name)
-    local ok,id = pcall(function()
-        return Players:GetUserIdFromNameAsync(name)
-    end)
-    if not ok then return end
-
-    local ok2,desc = pcall(function()
-        return Players:GetHumanoidDescriptionFromUserId(id)
-    end)
-    if not ok2 then return end
-
-    local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum:ApplyDescription(desc) end
-end
-
---// =====================
---// HIM EFFECT (FADE)
---// =====================
-local playing = false
-
-local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.ResetOnSpawn = false
-
-local main = Instance.new("TextLabel", gui)
-main.Size = UDim2.new(0,500,0,40)
-main.Position = UDim2.new(0.5,-250,0.75,0)
-main.BackgroundTransparency = 1
-main.TextScaled = true
-main.Font = Enum.Font.GothamBold
-main.TextTransparency = 1
-
-local sub = Instance.new("TextLabel", gui)
-sub.Size = UDim2.new(0,500,0,25)
-sub.Position = UDim2.new(0.5,-250,0.75,35)
-sub.BackgroundTransparency = 1
-sub.TextScaled = true
-sub.Font = Enum.Font.Gotham
-sub.TextColor3 = Color3.fromRGB(200,200,200)
-sub.TextTransparency = 1
-
-local function fadeText(text1,text2,isLaugh)
-    main.Text = text1
-    sub.Text = text2
-    main.TextColor3 = isLaugh and Color3.fromRGB(255,0,0) or Color3.new(1,1,1)
-
-    -- fade in
-    TweenService:Create(main,TweenInfo.new(0.5),{TextTransparency=0}):Play()
-    TweenService:Create(sub,TweenInfo.new(0.5),{TextTransparency=0}):Play()
-
-    if isLaugh then
-        -- rung + sound cùng lúc
-        task.spawn(function()
-            local s = Instance.new("Sound", workspace)
-            s.SoundId = "rbxassetid://140445930084397"
-            s.Volume = 2
-            s:Play()
-            game:GetService("Debris"):AddItem(s,5)
-        end)
-
-        task.spawn(function()
-            for i=1,20 do
-                main.Position = UDim2.new(0.5,-250 + math.random(-4,4),0.75 + math.random(-3,3),0)
-                task.wait(0.03)
-            end
-            main.Position = UDim2.new(0.5,-250,0.75,0)
-        end)
-    end
-
-    task.wait(2.5)
-
-    -- fade out
-    TweenService:Create(main,TweenInfo.new(0.5),{TextTransparency=1}):Play()
-    TweenService:Create(sub,TweenInfo.new(0.5),{TextTransparency=1}):Play()
-
-    task.wait(0.6)
-end
-
---// UI HOME
-Home:AddToggle({
-    Name = "Auto Equip",
-    Callback = function(v) autoEquip = v end
-})
-
-Home:AddToggle({
-    Name = "Auto Click",
-    Callback = function(v) autoClick = v end
-})
-
-Home:AddToggle({
-    Name = "God Mode 🗿",
-    Callback = function(v) godMode = v end
-})
-
-Home:AddToggle({
-    Name = "Anti AFK 💤",
-    Callback = function(v) antiAFK = v end
-})
-
-Home:AddToggle({
-    Name = "Black Screen",
-    Callback = function(v)
-        blackGui.Parent = v and game.CoreGui or nil
-    end
-})
-
---// MISC
-Misc:AddTextbox({
-    Name = "Avatar Name",
-    Callback = function(v) avatarName = v end
-})
-
-Misc:AddButton({
-    Name = "Apply Avatar",
-    Callback = function()
-        if avatarName ~= "" then applyAvatar(avatarName) end
-    end
-})
-
-Misc:AddButton({
-    Name = "Him",
-    Callback = function()
-        if playing then return end
-        playing = true
-
-        fadeText("Why do you know I'm here, stranger?","你为什么知道我在这里，陌生人？",false)
-        fadeText("It would be more interesting if you keep interfering.","继续干扰会更有趣。",false)
-        fadeText("Hahah...?","哈哈哈...？",true)
-
-        playing = false
-    end
-})
-
-Misc:AddButton({
-    Name = "Rejoin",
-    Callback = function()
-        game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
-    end
-})
-
-OrionLib:Init()
